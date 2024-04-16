@@ -52,9 +52,46 @@ int main()
 	cout << d << "\n************\n" << e << "\n************\n";
 	cout << d.trace() << "\n************\n";
 	e *= e;
+	d = e * k;
 	cout << e << "\n************\n";
 	cout << k << "\n************\n";
 	cout << k.det() << "\n************\n";
 	cout << k.rank() << "\n************\n";
+	vector<Rational> q = k.getRow(3);
+	Matrix<4, 4> u;
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			cin >> u[i][j];
+		}
+	}
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			cout << u[i][j] << ' ';
+		}
+		cout << endl;
+	}
+	SquareMatrix<4> R;
+	R = u;
+	cout << "\n************\n";
+	u.invert();
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			cout << u[i][j] << ' ';
+		}
+		cout << endl;
+	}
+	cout << "\n************\n";
+	//vector<vector<int>> z(5, vector<int>(5, rand() % 10 + 1));
+	cout << R.det() << "\n************\n";
 	return 0;
 }
+/*5 6 4 3
+2 3 7 8
+1 0 9 5
+3 0 4 3*/

@@ -2,6 +2,7 @@
 #include<iostream>
 #include<algorithm>
 #include<vector>
+#include<string>
 
 using namespace std;
 
@@ -154,7 +155,7 @@ public:
 		Rational y(numerator, denominator * x);
 		return y;
 	}
-	bool operator==(const Rational& x)
+	bool operator==(const Rational& x) const
 	{
 		if (denominator == x.denominator && numerator == x.numerator)
 		{
@@ -165,11 +166,11 @@ public:
 			return false;
 		}
 	}
-	bool operator!=(const Rational& x)
+	bool operator!=(const Rational& x) const
 	{
 		return !(operator==(x));
 	}
-	bool operator<(const Rational & x)
+	bool operator<(const Rational & x) const
 	{
 		if (denominator > x.denominator)
 		{
@@ -191,15 +192,15 @@ public:
 			return false;
 		}
 	}
-	bool operator>(const Rational & x)
+	bool operator>(const Rational & x) const
 	{
 		return !(operator<(x));
 	}
-	bool operator<=(const Rational& x)
+	bool operator<=(const Rational& x) const
 	{
 		return (operator<(x) || operator==(x));
 	}
-	bool operator>=(const Rational& x)
+	bool operator>=(const Rational& x) const
 	{
 		return (operator>(x) || operator==(x));
 	}
@@ -208,13 +209,39 @@ public:
 		out << data.numerator << '/' << data.denominator;
 		return out;
 	}
+	friend istream& operator>>(istream& in, Rational& data)
+	{
+		string str;
+		in >> str;
+		if (str.find('/') != -1)
+		{
+			data.numerator = stoi(str.substr(0, str.find('/')));
+			str.erase(0, str.find('/') + 1);
+			data.denominator = stoi(str);
+		}
+		else
+		{
+			data.numerator = stoi(str);
+			data.denominator = 1;
+		}
+		data.ToComfraction();
+		return in;
+	}
 };
 template<size_t M, size_t N, typename Field>
 class Matrix
 {
-private:
+protected:
 	vector<vector<Field>> mat;
 public:
+	int size()
+	{
+		return mat.size();
+	}
+	void resize(int x)
+	{
+		mat.resize(x);
+	}
 	vector<Field>& operator[](int index)
 	{
 		return mat[index];
@@ -224,7 +251,30 @@ public:
 		return mat[index];
 	}
 	Matrix() = delete;
-	Matrix(Field x) : mat(M, vector<Field>(N, x)) {}
+	Matrix(const Field& x) : mat(M, vector<Field>(N, x)) {}
+	Matrix(const Matrix& x)
+	{
+		if (M != x.mat.size())
+		{
+			throw exception();
+		}
+		else
+		{
+			mat.resize(M);
+			if (N != x.mat[0].size())
+			{
+				throw exception();
+			}
+			for (int i = 0; i < M; i++)
+			{
+				mat[i].resize(N);
+				for (int j = 0; j < N; j++)
+				{
+					mat[i][j] = x[i][j];
+				}
+			}
+		}
+	}
 	bool operator==(const Matrix& x)
 	{
 		if (mat.size() != x.mat.size() || mat[0].size() != x.mat[0].size())
@@ -251,7 +301,7 @@ public:
 		return !(operator==(x));
 	}
 	template<typename T>
-	Matrix(vector<vector<T>> v)
+	Matrix(const vector<vector<T>>& v)
 	{
 		if (M != v.size())
 		{
@@ -274,29 +324,6 @@ public:
 						mat[i][j] = v[i][j];
 					}
 				}
-			}
-		}
-	}
-	Matrix(const Matrix& x)
-	{
-		if (M != x.mat.size())
-		{
-			throw exception();
-		}
-		else
-		{
-			mat.resize(M);
-			if (N != x.mat[0].size())
-			{
-				throw exception();
-			}
-			for (int i = 0; i < M; i++)
-			{
-					mat[i].resize(N);
-					for (int j = 0; j < N; j++)
-					{
-						mat[i][j] = x[i][j];
-					}
 			}
 		}
 	}
@@ -341,6 +368,35 @@ public:
 	{
 		operator+=(-x);
 		return *this;
+	}
+	template<typename T>
+	Matrix& operator*=(const T& x)
+	{
+		Matrix<M, N> y(0);
+		for (int i = 0; i < M; i++)
+		{
+			for (int j = 0; j < N; j++)
+			{
+				y[i][j] = *this[i][j];
+				y[i][j] *= x;
+			}
+		}
+		*this = y;
+		return *this;
+	}
+	template<typename T>
+	const Matrix operator*(const T& x) const
+	{
+		Matrix<M, N> y(0);
+		for (int i = 0; i < M; i++)
+		{
+			for (int j = 0; j < N; j++)
+			{
+				y[i][j] = *this[i][j];
+				y[i][j] *= x;
+			}
+		}
+		return y;
 	}
 	template<size_t K>
 	const Matrix<M, K> operator*(const Matrix<N, K>& x) const
@@ -409,8 +465,8 @@ public:
 	const Matrix inverted() const = delete;
 	vector<Field> getRow(size_t m) const
 	{
-		vector<Field> ans(m);
-		for (int i = 0; i < N; i++)
+		vector<Field> ans(M);
+		for (int i = 0; i < M; i++)
 		{
 			ans[i] = mat[m][i];
 		}
@@ -418,8 +474,8 @@ public:
 	}
 	vector<Field> getColumn(size_t n) const
 	{
-		vector<Field> ans(n);
-		for (int i = 0; i < M; i++)
+		vector<Field> ans(N);
+		for (int i = 0; i < N; i++)
 		{
 			ans[i] = mat[i][n];
 		}
@@ -452,9 +508,17 @@ public:
 template<size_t M, typename Field>
 class Matrix<M, M, Field>
 {
-private:
+protected:
 	vector<vector<Field>> mat;
 public:
+	int size()
+	{
+		return mat.size();
+	}
+	void resize(int x)
+	{
+		mat.resize(x);
+	}
 	vector<Field>& operator[](int index)
 	{
 		return mat[index];
@@ -472,7 +536,30 @@ public:
 			mat[i][i] = 1;
 		}
 	}
-	Matrix(Field x) : mat(M, vector<Field>(M, x)) {}
+	Matrix(const Field& x) : mat(M, vector<Field>(M, x)) {}
+	Matrix(const Matrix<M, M>& x)
+	{
+		if (M != x.mat.size())
+		{
+			throw exception();
+		}
+		else
+		{
+			mat.resize(M);
+			if (M != x.mat[0].size())
+			{
+				throw exception();
+			}
+			for (int i = 0; i < M; i++)
+			{
+				mat[i].resize(M);
+				for (int j = 0; j < M; j++)
+				{
+					mat[i][j] = x[i][j];
+				}
+			}
+		}
+	}
 	bool operator==(const Matrix& x)
 	{
 		if (mat.size() != x.mat.size() || mat[0].size() != x.mat[0].size())
@@ -499,7 +586,7 @@ public:
 		return !(operator==(x));
 	}
 	template<typename T>
-	Matrix(vector<vector<T>> v)
+	Matrix(const vector<vector<T>>& v)
 	{
 		if (M != v.size())
 		{
@@ -521,29 +608,6 @@ public:
 					{
 						mat[i][j] = v[i][j];
 					}
-				}
-			}
-		}
-	}
-	Matrix(const Matrix& x)
-	{
-		if (M != x.mat.size())
-		{
-			throw exception();
-		}
-		else
-		{
-			mat.resize(M);
-			if (M != x.mat[0].size())
-			{
-				throw exception();
-			}
-			for (int i = 0; i < M; i++)
-			{
-				mat[i].resize(M);
-				for (int j = 0; j < M; j++)
-				{
-					mat[i][j] = x[i][j];
 				}
 			}
 		}
@@ -602,6 +666,35 @@ public:
 				{
 					y[i][j] += mat[i][k] * x[k][j];
 				}
+			}
+		}
+		return y;
+	}
+	template<typename T>
+	Matrix& operator*=(const T& x)
+	{
+		Matrix<M, M> y(0);
+		for (int i = 0; i < M; i++)
+		{
+			for (int j = 0; j < M; j++)
+			{
+					y[i][j] = *this[i][j];
+					y[i][j] *= x;
+			}
+		}
+		*this = y;
+		return *this;
+	}
+	template<typename T>
+	const Matrix operator*(const T& x) const
+	{
+		Matrix<M, M> y(0);
+		for (int i = 0; i < M; i++)
+		{
+			for (int j = 0; j < M; j++)
+			{
+					y[i][j] = *this[i][j];
+					y[i][j] *= x;
 			}
 		}
 		return y;
@@ -697,11 +790,114 @@ public:
 		}
 		return ans;
 	}
-	void invert() = delete;
-	const Matrix inverted() const = delete;
+	void invert()
+	{
+		if (det() == 0)
+		{
+			throw exception();
+		}
+		Matrix<M, M> y;
+		for (int i = 0; i < M; i++)
+		{
+			int row = i;
+			Field mx = mat[i][i];
+			for (int k = i + 1; k < M; k++)
+			{
+				if (mat[k][i] * -1 > mx)
+				{
+					row = k;
+					mx = mat[k][i] * -1;
+				}
+			}
+			if (row != i)
+			{
+				swap(mat[row], mat[i]);
+				swap(y[row], y[i]);
+			}
+			for (int k = i + 1; k < M; k++)
+			{
+				Field e = mat[k][i] / mat[i][i];
+				for (int j = 0; j < M; j++)
+				{
+					mat[k][j] -= e * mat[i][j];
+					y[k][j] -= e * y[i][j];
+				}
+			}
+		}
+		for (int i = M - 1; i >= 0; i--)
+		{
+			for (int j = i - 1; j >= 0; j--)
+			{
+				Field e = mat[j][i] / mat[i][i];
+				for (int k = 0; k < M; k++)
+				{
+					mat[j][k] -= e * mat[i][k];
+					y[j][k] -= e * y[i][k];
+				}
+			}
+			for (int j = 0; j < M; j++)
+			{
+				y[i][j] /= mat[i][i];
+			}
+		}
+		*this = y;
+	}
+	const Matrix inverted() const
+	{
+		if (det() == 0)
+		{
+			throw exception();
+		}
+		Matrix<M, M> y, z;
+		z = *this;
+		for (int i = 0; i < M; i++)
+		{
+			int row = i;
+			Field mx = z[i][i];
+			for (int k = i + 1; k < M; k++)
+			{
+				if (z[k][i] * -1 > mx)
+				{
+					row = k;
+					mx = z[k][i] * -1;
+				}
+			}
+			if (row != i)
+			{
+				swap(z[row], z[i]);
+				swap(y[row], y[i]);
+			}
+			for (int k = i + 1; k < M; k++)
+			{
+				Field e = z[k][i] / z[i][i];
+				for (int j = 0; j < M; j++)
+				{
+					z[k][j] -= e * z[i][j];
+					y[k][j] -= e * y[i][j];
+				}
+			}
+		}
+		for (int i = M - 1; i >= 0; i--)
+		{
+			for (int j = i - 1; j >= 0; j--)
+			{
+				Field e = z[j][i] / z[i][i];
+				for (int k = 0; k < M; k++)
+				{
+					z[j][k] -= e * z[i][k];
+					y[j][k] -= e * y[i][k];
+				}
+			}
+			for (int j = 0; j < M; j++)
+			{
+				y[i][j] /= z[i][i];
+			}
+		}
+		return y;
+	}
 	vector<Field> getRow(size_t m) const
 	{
-		vector<Field> ans(m);
+		vector<Field> ans(M);
 		for (int i = 0; i < M; i++)
 		{
 			ans[i] = mat[m][i];
@@ -710,7 +906,7 @@ public:
 	}
 	vector<Field> getColumn(size_t n) const
 	{
-		vector<Field> ans(n);
+		vector<Field> ans(M);
 		for (int i = 0; i < M; i++)
 		{
 			ans[i] = mat[i][n];
@@ -740,3 +936,6 @@ public:
 		return out;
 	}
 };
+
+template<size_t M, typename Field = Rational>
+using SquareMatrix = Matrix<M, M>;
